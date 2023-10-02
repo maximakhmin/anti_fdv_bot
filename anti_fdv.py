@@ -26,7 +26,7 @@ def get_text_messages(message):
         time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
         qual = datetime.fromisoformat(time[:-1]) + timedelta(hours=3)
-        delta = qual - datetime.now()
+        delta = qual - datetime.now() - timedelta(hours=3)
 
         text += "Квала {}".format(qual.strftime('%d/%m/%Y %H:%M'))
         text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
@@ -36,7 +36,7 @@ def get_text_messages(message):
         time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
         race = datetime.fromisoformat(time[:-1]) + timedelta(hours=3)
-        delta = race - datetime.now()
+        delta = race - datetime.now() - timedelta(hours=3)
 
         text += "Гонка {}".format(race.strftime('%d/%m/%Y %H:%M'))
         text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
@@ -91,7 +91,7 @@ def check_time():
     reminds = Reminds()
     reminds.get_reminds()
     while True:
-        now = datetime.now()
+        now = datetime.now() + timedelta(hours=3)
         delta = timedelta(seconds=60)
 
         if now - reminds.remind1 < delta and now > reminds.remind1:
