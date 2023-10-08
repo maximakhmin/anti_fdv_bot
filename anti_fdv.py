@@ -3,9 +3,10 @@ import requests
 from datetime import datetime
 from datetime import timedelta
 import prognoz_table
-from tokens import TOKEN, CHAT_ID, FORM_LINK
+from tokens import TOKEN, CHAT_ID, FORM_LINK, MARKS
 import time
 import threading
+import pytz
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -25,21 +26,31 @@ def get_text_messages(message):
         time = data["MRData"]["RaceTable"]["Races"][0]["Qualifying"]
         time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
-        qual = datetime.fromisoformat(time[:-1]) + timedelta(hours=3)
-        delta = qual - datetime.now() - timedelta(hours=3)
+        qual = datetime.fromisoformat(time[:-1])
+        qual = pytz.timezone('UTC').localize(qual)
+        qual = qual.astimezone(pytz.timezone('Europe/Moscow'))
+        now = datetime.now(pytz.timezone('Europe/Moscow'))
+        delta = qual - now
 
         text += "Квала {}".format(qual.strftime('%d/%m/%Y %H:%M'))
-        text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
+
+        if qual > now:
+            text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
 
     elif "/whenrace" in message.text:
         time = data["MRData"]["RaceTable"]["Races"][0]
         time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
-        race = datetime.fromisoformat(time[:-1]) + timedelta(hours=3)
-        delta = race - datetime.now() - timedelta(hours=3)
+        race = datetime.fromisoformat(time[:-1])
+        race = pytz.timezone('UTC').localize(race)
+        race = race.astimezone(pytz.timezone('Europe/Moscow'))
+        now = datetime.now(pytz.timezone('Europe/Moscow'))
+        delta = race - now
 
         text += "Гонка {}".format(race.strftime('%d/%m/%Y %H:%M'))
-        text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
+
+        if race > now:
+            text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
     elif "/where" in message.text:
         place = data["MRData"]["RaceTable"]["Races"][0]["Circuit"]["circuitName"]
         text += place
@@ -75,10 +86,12 @@ class Reminds():
 
         time = data["MRData"]["RaceTable"]["Races"][0]["Qualifying"]
         time = time["date"]+'T'+time["time"][:-1]+".000Z"
-        qual = datetime.fromisoformat(time[:-1]) + timedelta(hours=3)
+        qual = datetime.fromisoformat(time[:-1])
+        qual = pytz.timezone('UTC').localize(qual)
+        qual = qual.astimezone(pytz.timezone('Europe/Moscow'))
 
         self.remind1 = qual - timedelta(days=1)
-        self.remind2 = qual - timedelta(hours=2)
+        self.remind2 = qual - timedelta(hours=1)
         # self.remind1 = datetime(2023, 10, 1, 15, 10, 00)
         # self.remind2 = datetime(2023, 10, 1, 15, 15, 00)
     
@@ -91,14 +104,14 @@ def check_time():
     reminds = Reminds()
     reminds.get_reminds()
     while True:
-        now = datetime.now() + timedelta(hours=3)
+        now = datetime.now(pytz.timezone('Europe/Moscow'))
         delta = timedelta(seconds=60)
 
         if now - reminds.remind1 < delta and now > reminds.remind1:
-            bot.send_message(chat_id=CHAT_ID, text="Делаем прогноз\n\nДедлайн через 24 часа\n\n{}".format(FORM_LINK))
+            bot.send_message(chat_id=CHAT_ID, text="{}\n\nДелаем прогноз\n\nДедлайн через 24 часа\n\n{}".format(MARKS, FORM_LINK))
             reminds.min_remind1()            
         if now - reminds.remind2 < delta and now > reminds.remind2:
-            bot.send_message(chat_id=CHAT_ID, text="Осталось 2 часа\n\n{}".format(FORM_LINK))
+            bot.send_message(chat_id=CHAT_ID, text="{}\n\nОстался 1 час\n\n{}".format(MARKS, FORM_LINK))
             reminds.min_remind2()
             reminds.get_reminds()
         time.sleep(60)
