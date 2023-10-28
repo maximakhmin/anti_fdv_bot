@@ -7,13 +7,19 @@ from tokens import G_TABLE_KEY
 KEY = G_TABLE_KEY
 FILE_NAME = "credentials_anti_fdv.json"
 
-def race_parse(week):
+def race_parse(week, sprint=False):
 
-    url = f'https://ergast.com/api/f1/current/{week}/results.json'
+    if sprint==False:
+        url = f'https://ergast.com/api/f1/current/{week}/results.json'
+        temp = "Results"
+    else:
+        url = f'https://ergast.com/api/f1/current/{week}/sprint.json'
+        temp = "SprintResults"
+
     request = requests.get(url)
     result = []
     data = request.json()
-    pilots = data["MRData"]["RaceTable"]["Races"][0]["Results"]
+    pilots = data["MRData"]["RaceTable"]["Races"][0][temp]
 
     for elem in pilots:
         result.append(elem["Driver"]["familyName"])
@@ -57,8 +63,20 @@ def getLastThree(prognozes):
 
     return result
 
+def getLastSix(prognozes):
+    result = []
+    names = ['', '', 'Имя', 'Имя']
 
-def main(RACE):
+    for elem in prognozes[::-1]:
+        if names.count(elem[1]) <= 1:
+            names.append(elem[1])
+            result.append(elem[1:])
+
+    return result[::-1]
+
+
+
+def main(RACE, sprint=False):
     try:
 
         gc = gspread.service_account(FILE_NAME)
@@ -77,11 +95,23 @@ def main(RACE):
         cell_finish = result.cell(cell_start.row+22, col)
         RANGE = cell_start.address+':'+cell_finish.address
         WEEK = result.cell(cell_start.row, cell_start.col-2).value
+        if sprint:
+            cell_start = result.find('спринт ' + RACE)
+            col = cell_start.col+1
+            while result.cell(cell_start.row, col).value == None:
+                col+=1
+            col-=1
+            cell_finish = result.cell(cell_start.row+22, col)
+            RANGE2 = cell_start.address+':'+cell_finish.address
 
 
         # получение прогнозов из опроса
         prognozes = prognoz.get_all_values()
-        prognozes = getLastThree(prognozes)
+        if sprint==True:
+            prognozes = getLastSix(prognozes)
+        else:
+            prognozes = getLastThree(prognozes)
+ 
 
 
         # получение результата гонки
@@ -103,6 +133,7 @@ def main(RACE):
                     race[i][2:] = elem[1:11]+['']*10+[elem[-1]]
                     player_prognoz= elem[1:11]
                     player_pole = elem[-1]
+                    break
             player_result, points = prognoz_func(RACE_RESULT, player_prognoz)
             race[i+1][2:12] = player_result
             temp = 0
@@ -114,6 +145,44 @@ def main(RACE):
 
         race = [[race[j][i] for j in range(len(race))] for i in range(len(race[0]))] # транспонирование
         result.update(RANGE, race)
+
+        if sprint:
+            # получение прогнозов из опроса
+            prognozes = prognoz.get_all_values()
+            prognozes = getLastThree(prognozes)
+
+            # получение результата гонки
+            RACE_RESULT = race_parse(WEEK, sprint)
+
+            # перезапись таблицы
+            race = result.get_values(RANGE2)
+
+            race = [[race[j][i] for j in range(len(race))] for i in range(len(race[0]))] # транспонирование
+
+            race[0][2:23] = RACE_RESULT
+
+            for i in range(1, len(race), 2):
+                name = race[i][1]
+                for elem in prognozes:
+                    if elem[0]==name:
+                        race[i][2:] = elem[1:11]+['']*10+[elem[-1]]
+                        player_prognoz= elem[1:11]
+                        player_pole = elem[-1]
+                        break
+                player_result, points = prognoz_func(RACE_RESULT, player_prognoz)
+                race[i+1][2:12] = player_result
+                temp = 0
+                if player_pole==RACE_RESULT[-1]:
+                    temp = 5
+                race[i+1][2:] = player_result+['']*10+[temp]
+
+                for i in range(len(data)):
+                    if data[i][0]==name:
+                        data[i][1] += points+temp
+                # data.append([name, points+temp])
+
+            race = [[race[j][i] for j in range(len(race))] for i in range(len(race[0]))] # транспонирование
+            result.update(RANGE2, race)
 
 
         # форматирование вывода
@@ -132,3 +201,5 @@ def main(RACE):
     except Exception as e:
         return "ERROR"
 
+
+print(main("Катар", True))

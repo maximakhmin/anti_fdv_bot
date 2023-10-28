@@ -63,8 +63,17 @@ def get_text_messages(message):
             text+="Прогноз посчитан\n\nРезультаты\n"
             for i in range(len(data)):
                 text+="\n{}. {}, {} очков".format(i+1, data[i][0], data[i][1])
+    elif "/sprintprognoz" in message.text:
+        race = message.text[15:].capitalize()
+        data = prognoz_table.main(race, True)
+        if data=="ERROR":
+            text+="Ошибка, попробуйте позднее"
+        else:
+            text+="Прогноз посчитан\n\nРезультаты\n"
+            for i in range(len(data)):
+                text+="\n{}. {}, {} очков".format(i+1, data[i][0], data[i][1])
     elif "/help" in message.text:
-        text = "Команды для бота\n\n/whenrace - время до следующей гонки\n/whenqual /deadline - время до следующей квалификации (дедлайн прогноза)\n/where - где следующая гонка\n/prognoz [Название этапа] - подчет очков прогноза"
+        text = "Команды для бота\n\n/whenrace - время до следующей гонки\n/whenqual /deadline - время до следующей квалификации (дедлайн прогноза)\n/where - где следующая гонка\n/prognoz [Название этапа] - подчет очков прогноза\n/sprintprognoz [Название этапа] - подчет очков прогноза вместе со спринтом"
 
     else:
         b = False
@@ -79,7 +88,6 @@ class Reminds():
         self.remind2 = ""
 
     def get_reminds(self):
-        global remind1, remind2
         url = f'https://ergast.com/api/f1/current/next.json?'
         request = requests.get(url)
         data = request.json()
@@ -113,11 +121,12 @@ def check_time():
         if now - reminds.remind2 < delta and now > reminds.remind2:
             bot.send_message(chat_id=CHAT_ID, text="{}\n\nОстался 1 час\n\n{}".format(MARKS, FORM_LINK))
             reminds.min_remind2()
+        if now - reminds.remind2 > timedelta(days=4) and now > reminds.remind2:
             reminds.get_reminds()
         time.sleep(60)
 
 if __name__ == "__main__":
     t1 = threading.Thread(target=check_time)
     t1.start()
-    t2 = threading.Thread(target=bot.polling(none_stop=True, interval=1))
+    t2 = threading.Thread(target=bot.infinity_polling(none_stop=True, interval=1))
     t2.start()
