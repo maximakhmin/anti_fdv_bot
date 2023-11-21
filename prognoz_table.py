@@ -23,7 +23,7 @@ def race_parse(week, sprint=False):
 
     for elem in pilots:
         result.append(elem["Driver"]["familyName"])
-        if (elem["position"]=="1"):
+        if (elem["grid"]=="1"):
             poul = elem["Driver"]["familyName"]
     result.append(poul)
 
@@ -48,7 +48,8 @@ def race_parse(week, sprint=False):
         'Sainz': 'Сайнс',
         'Hülkenberg': 'Хюлькенберг',
         'Magnussen': 'Магнуссен',
-        'Lawson': 'Лоусон'
+        'Lawson': 'Лоусон',
+        'Ricciardo': 'Риккьярдо'
     }
     return [eng_to_ru.get(surname, surname) for surname in result]
 
