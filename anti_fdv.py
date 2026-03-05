@@ -25,8 +25,8 @@ def get_next_race_info():
         'name' : data['race'][0]['raceName'],
         'circuit' : f"{data['race'][0]['circuit']['circuitName']}, {data['race'][0]['circuit']['country']}, {data['race'][0]['circuit']['city']}",
         'lap_record' : f"{data_fd['driver'][0]['name']} {data_fd['driver'][0]['surname']} {data['race'][0]['circuit']['lapRecord']}",
-        'qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['qualy']['date']} {data['race'][0]['schedule']['qualy']['time']}", "%Y-%m-%d %H:%M:%SZ") + timedelta(hours=3)).astimezone(pytz.timezone('Europe/Moscow')),
-        'race_time' : (datetime.strptime(f"{data['race'][0]['schedule']['race']['date']} {data['race'][0]['schedule']['race']['time']}", "%Y-%m-%d %H:%M:%SZ") + timedelta(hours=3)).astimezone(pytz.timezone('Europe/Moscow'))
+        'qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['qualy']['date']} {data['race'][0]['schedule']['qualy']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")),
+        'race_time' : (datetime.strptime(f"{data['race'][0]['schedule']['race']['date']} {data['race'][0]['schedule']['race']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC"))
     }
 
     return dic
@@ -44,16 +44,16 @@ def send_race_info(message):
     mes = f"""{d['name']}
 {d['circuit']}
 Lap record : {d['lap_record']}
-Qualy time : {datetime.strftime(d['qualy_time'], "%d/%m %H:%M")}
-Race time : {datetime.strftime(d['race_time'], "%d/%m %H:%M")}""" 
+Qualy time : {datetime.strftime(d['qualy_time'].astimezone(pytz.timezone("Europe/Moscow")), "%d/%m %H:%M")}
+Race time : {datetime.strftime(d['race_time'].astimezone(pytz.timezone("Europe/Moscow")), "%d/%m %H:%M")}""" 
     bot.send_message(message.chat.id, mes)
 
 
 @bot.message_handler(commands=["whenrace"])
 def whenrace(message):
     d = get_next_race_info()
-    delta = d['race_time'] - datetime.now(pytz.timezone('Europe/Moscow'))
-    mes = f"""Race time : {datetime.strftime(d['race_time'], "%d/%m %H:%M")}
+    delta = d['race_time'] - datetime.now(pytz.timezone("UTC"))
+    mes = f"""Race time : {datetime.strftime(d['race_time'].astimezone(pytz.timezone("Europe/Moscow")), "%d/%m %H:%M")}
 Remain : {delta.days} d {int(delta.seconds/3600)} h {int(delta.seconds%3600/60)} m"""
     bot.send_message(message.chat.id, mes)
 
@@ -61,8 +61,8 @@ Remain : {delta.days} d {int(delta.seconds/3600)} h {int(delta.seconds%3600/60)}
 @bot.message_handler(commands=["whenqualy"])
 def whenrace(message):
     d = get_next_race_info()
-    delta = d['qualy_time'] - datetime.now(pytz.timezone('Europe/Moscow'))
-    mes = f"""Qualye time : {datetime.strftime(d['qualy_time'], "%d/%m %H:%M")}
+    delta = d['qualy_time'] - datetime.now(pytz.timezone("UTC"))
+    mes = f"""Qualye time : {datetime.strftime(d['qualy_time'].astimezone(pytz.timezone("Europe/Moscow")), "%d/%m %H:%M")}
 Remain : {delta.days} d {int(delta.seconds/3600)} h {int(delta.seconds%3600/60)} m"""
     bot.send_message(message.chat.id, mes)
 
@@ -78,7 +78,7 @@ def check_time():
     qualy_time, reminds = set_time()
     while True:
         time.sleep(60)
-        now = datetime.now(pytz.timezone('Europe/Moscow'))
+        now = datetime.now(pytz.timezone("UTC"))
         delta = 90 # seconds
 
 
