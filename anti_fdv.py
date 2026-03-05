@@ -8,125 +8,98 @@ import time
 import threading
 import pytz
 
+
 bot = telebot.TeleBot(TOKEN)
 
-@bot.message_handler(content_types=['text'])
 
-def get_text_messages(message):
-
-    b = True
-
-    message.text = message.text.lower()
-
-    url = f'https://ergast.com/api/f1/current/next.json?'
+def get_next_race_info():
+    url = f'https://f1api.dev/api/current/next'
     request = requests.get(url)
     data = request.json()
-    text = ""
-    if "/whenqual" in message.text or "/deadline" in message.text:
-        time = data["MRData"]["RaceTable"]["Races"][0]["Qualifying"]
-        time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
-        qual = datetime.fromisoformat(time[:-1])
-        qual = pytz.timezone('UTC').localize(qual)
-        qual = qual.astimezone(pytz.timezone('Europe/Moscow'))
-        now = datetime.now(pytz.timezone('Europe/Moscow'))
-        delta = qual - now
+    url = f"https://f1api.dev/api/drivers/{data['race'][0]['circuit']['fastestLapDriverId']}"
+    request = requests.get(url)
+    data_fd = request.json()
 
-        text += "Квала {}".format(qual.strftime('%d/%m/%Y %H:%M'))
+    dic = {
+        'name' : data['race'][0]['raceName'],
+        'circuit' : f"{data['race'][0]['circuit']['circuitName']}, {data['race'][0]['circuit']['country']}, {data['race'][0]['circuit']['city']}",
+        'lap_record' : f"{data_fd['driver'][0]['name']} {data_fd['driver'][0]['surname']} {data['race'][0]['circuit']['lapRecord']}",
+        'qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['qualy']['date']} {data['race'][0]['schedule']['qualy']['time']}", "%Y-%m-%d %H:%M:%SZ") + timedelta(hours=3)).astimezone(pytz.timezone('Europe/Moscow')),
+        'race_time' : (datetime.strptime(f"{data['race'][0]['schedule']['race']['date']} {data['race'][0]['schedule']['race']['time']}", "%Y-%m-%d %H:%M:%SZ") + timedelta(hours=3)).astimezone(pytz.timezone('Europe/Moscow'))
+    }
 
-        if qual > now:
-            text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
+    return dic
 
-    elif "/whenrace" in message.text:
-        time = data["MRData"]["RaceTable"]["Races"][0]
-        time = time["date"]+'T'+time["time"][:-1]+".000Z"
 
-        race = datetime.fromisoformat(time[:-1])
-        race = pytz.timezone('UTC').localize(race)
-        race = race.astimezone(pytz.timezone('Europe/Moscow'))
-        now = datetime.now(pytz.timezone('Europe/Moscow'))
-        delta = race - now
+@bot.message_handler(commands=["commands"])
+def commands(message):
+    mes = "/race : next race info\n/whenrace : next race time\n/whenqualy : next qualy time"
+    bot.send_message(message.chat.id, mes)
 
-        text += "Гонка {}".format(race.strftime('%d/%m/%Y %H:%M'))
 
-        if race > now:
-            text += "\n\nОсталось {} дней, {} часов, {} минут".format(delta.days, int(delta.seconds/3600), int(delta.seconds%3600/60))
-    elif "/where" in message.text:
-        place = data["MRData"]["RaceTable"]["Races"][0]["Circuit"]["circuitName"]
-        text += place
-    elif "/prognoz" in message.text:
-        race = message.text[9:].capitalize()
-        data = prognoz_table.main(race)
-        if data=="ERROR":
-            text+="Ошибка, попробуйте позднее"
-        else:
-            text+="Прогноз посчитан\n\nРезультаты\n"
-            for i in range(len(data)):
-                text+="\n{}. {}, {} очков".format(i+1, data[i][0], data[i][1])
-    elif "/sprintprognoz" in message.text:
-        race = message.text[15:].capitalize()
-        data = prognoz_table.main(race, True)
-        if data=="ERROR":
-            text+="Ошибка, попробуйте позднее"
-        else:
-            text+="Прогноз посчитан\n\nРезультаты\n"
-            for i in range(len(data)):
-                text+="\n{}. {}, {} очков".format(i+1, data[i][0], data[i][1])
-    elif "/help" in message.text:
-        text = "Команды для бота\n\n/whenrace - время до следующей гонки\n/whenqual /deadline - время до следующей квалификации (дедлайн прогноза)\n/where - где следующая гонка\n/prognoz [Название этапа] - подчет очков прогноза\n/sprintprognoz [Название этапа] - подчет очков прогноза вместе со спринтом"
+@bot.message_handler(commands=["race"])
+def send_race_info(message):
+    d = get_next_race_info()
+    mes = f"""{d['name']}
+{d['circuit']}
+Lap record : {d['lap_record']}
+Qualy time : {datetime.strftime(d['qualy_time'], "%d/%m %H:%M")}
+Race time : {datetime.strftime(d['race_time'], "%d/%m %H:%M")}""" 
+    bot.send_message(message.chat.id, mes)
 
-    else:
-        b = False
-        text = ""
 
-    if b:
-        bot.send_message(message.chat.id, text)
+@bot.message_handler(commands=["whenrace"])
+def whenrace(message):
+    d = get_next_race_info()
+    delta = d['race_time'] - datetime.now(pytz.timezone('Europe/Moscow'))
+    mes = f"""Race time : {datetime.strftime(d['race_time'], "%d/%m %H:%M")}
+Remain : {delta.days} d {int(delta.seconds/3600)} h {int(delta.seconds%3600/60)} m"""
+    bot.send_message(message.chat.id, mes)
 
-class Reminds():
-    def __init__(self):
-        self.remind1 = ""
-        self.remind2 = ""
 
-    def get_reminds(self):
-        url = f'https://ergast.com/api/f1/current/next.json?'
-        request = requests.get(url)
-        data = request.json()
+@bot.message_handler(commands=["whenqualy"])
+def whenrace(message):
+    d = get_next_race_info()
+    delta = d['qualy_time'] - datetime.now(pytz.timezone('Europe/Moscow'))
+    mes = f"""Qualye time : {datetime.strftime(d['qualy_time'], "%d/%m %H:%M")}
+Remain : {delta.days} d {int(delta.seconds/3600)} h {int(delta.seconds%3600/60)} m"""
+    bot.send_message(message.chat.id, mes)
 
-        time = data["MRData"]["RaceTable"]["Races"][0]["Qualifying"]
-        time = time["date"]+'T'+time["time"][:-1]+".000Z"
-        qual = datetime.fromisoformat(time[:-1])
-        qual = pytz.timezone('UTC').localize(qual)
-        qual = qual.astimezone(pytz.timezone('Europe/Moscow'))
-
-        self.remind1 = qual - timedelta(days=1)
-        self.remind2 = qual - timedelta(hours=1)
-        # self.remind1 = datetime(2023, 10, 1, 15, 10, 00)
-        # self.remind2 = datetime(2023, 10, 1, 15, 15, 00)
-    
-    def min_remind1(self):
-        self.remind1 -= timedelta(hours=1)
-    def min_remind2(self):
-        self.remind2 -= timedelta(hours=1)
 
 def check_time():
-    reminds = Reminds()
-    reminds.get_reminds()
+    def set_time():
+        qualy_time = get_next_race_info()['qualy_time']
+        reminds = {timedelta(hours=-24) : "осталось 24 часа",
+                   timedelta(hours=-1) : "остался 1 час",
+                   timedelta(hours=0) : "прием прогнозов завершен"}
+        return qualy_time, reminds
+    
+    qualy_time, reminds = set_time()
     while True:
-        now = datetime.now(pytz.timezone('Europe/Moscow'))
-        delta = timedelta(seconds=60)
-
-        if now - reminds.remind1 < delta and now > reminds.remind1:
-            bot.send_message(chat_id=CHAT_ID, text="{}\n\nДелаем прогноз\n\nДедлайн через 24 часа\n\n{}".format(MARKS, FORM_LINK))
-            reminds.min_remind1()            
-        if now - reminds.remind2 < delta and now > reminds.remind2:
-            bot.send_message(chat_id=CHAT_ID, text="{}\n\nОстался 1 час\n\n{}".format(MARKS, FORM_LINK))
-            reminds.min_remind2()
-        if now - reminds.remind2 > timedelta(days=4) and now > reminds.remind2:
-            reminds.get_reminds()
         time.sleep(60)
+        now = datetime.now(pytz.timezone('Europe/Moscow'))
+        delta = 90 # seconds
 
+
+        if now > qualy_time:
+            qualy_time, reminds = set_time()
+            continue
+        to_remove = []
+        for remind, mes in reminds.items():
+            print( now - (qualy_time + remind))
+            if abs( ((qualy_time + remind) - now).seconds ) < delta:
+                to_remove.append(remind)
+                bot.send_message(chat_id=CHAT_ID, text=f"{mes}")
+        for rm in to_remove:
+            reminds.pop(rm)
+
+        
 if __name__ == "__main__":
     t1 = threading.Thread(target=check_time)
     t1.start()
     t2 = threading.Thread(target=bot.infinity_polling(none_stop=True, interval=1))
     t2.start()
+
+
+# bot.infinity_polling(none_stop=True, interval=1)

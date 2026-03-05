@@ -203,4 +203,4 @@ def main(RACE, sprint=False):
         return "ERROR"
 
 
-print(main("Катар", True))
+# print(main("Абу-даби", False))
