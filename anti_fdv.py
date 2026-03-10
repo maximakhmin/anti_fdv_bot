@@ -32,6 +32,9 @@ def get_next_race_info():
         'lap_record' : f"{data_fd['driver'][0]['name']} {data_fd['driver'][0]['surname']} {data['race'][0]['circuit']['lapRecord']}",
         'qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['qualy']['date']} {data['race'][0]['schedule']['qualy']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")),
         'race_time' : (datetime.strptime(f"{data['race'][0]['schedule']['race']['date']} {data['race'][0]['schedule']['race']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")),
+        'fp1_time' : (datetime.strptime(f"{data['race'][0]['schedule']['fp1']['date']} {data['race'][0]['schedule']['fp1']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")),
+        'fp2_time' : (datetime.strptime(f"{data['race'][0]['schedule']['fp2']['date']} {data['race'][0]['schedule']['fp2']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")) if not is_sprint else None,
+        'fp3_time' : (datetime.strptime(f"{data['race'][0]['schedule']['fp3']['date']} {data['race'][0]['schedule']['fp3']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")) if not is_sprint else None,
         'sprint_qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['sprintQualy']['date']} {data['race'][0]['schedule']['sprintQualy']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")) if is_sprint else None,
         'sprint_race_time' : (datetime.strptime(f"{data['race'][0]['schedule']['sprintRace']['date']} {data['race'][0]['schedule']['sprintRace']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")) if is_sprint else None,
     }
@@ -62,9 +65,13 @@ def send_race_info(message):
     mes = f"{d['name']}\n"
     mes += f"{d['circuit']}\n\n"
     mes += f"Lap record : {d['lap_record']}\n\n"
+    mes += f"Fp1 time : {datetime.strftime(d['fp1_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
     if d['is_sprint']:
-        mes += f"Sprint qualy time : {datetime.strftime(d['sprint_qualy_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
-        mes += f"Sprint race time : {datetime.strftime(d['sprint_race_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
+        mes += f"\nSprint qualy time : {datetime.strftime(d['sprint_qualy_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
+        mes += f"Sprint race time : {datetime.strftime(d['sprint_race_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n\n"
+    else:
+        mes += f"Fp2 time : {datetime.strftime(d['fp2_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
+        mes += f"Fp3 time : {datetime.strftime(d['fp3_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n\n"
     mes += f"Qualy time : {datetime.strftime(d['qualy_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
     mes += f"Race time : {datetime.strftime(d['race_time'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n\n"
     mes += f"Deadline : {datetime.strftime(d['deadline'].astimezone(pytz.timezone('Europe/Moscow')), '%d.%m.%Y %H:%M')}\n"
