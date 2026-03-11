@@ -26,8 +26,10 @@ def get_next_race_info():
     data_fd = request.json()
 
     dic = {
-        'is_sprint': is_sprint,
+        'is_sprint' : is_sprint,
+        'season' : data['season'],
         'name' : data['race'][0]['raceName'],
+        'circuit_id' : data['race'][0]['circuit']['circuitId'],
         'circuit' : f"{data['race'][0]['circuit']['circuitName']}, {data['race'][0]['circuit']['country']}, {data['race'][0]['circuit']['city']}",
         'lap_record' : f"{data_fd['driver'][0]['name']} {data_fd['driver'][0]['surname']} {data['race'][0]['circuit']['lapRecord']}",
         'qualy_time' : (datetime.strptime(f"{data['race'][0]['schedule']['qualy']['date']} {data['race'][0]['schedule']['qualy']['time']}", "%Y-%m-%d %H:%M:%SZ")).replace(tzinfo=pytz.timezone("UTC")),
@@ -49,6 +51,10 @@ COMMANDS = (
     ('/whenqualy', 'Next qualy time'),
     ('/whensprint', 'Sprint info'),
     ('/deadline', 'Next deadline'),
+    ('/drivers', 'Current drivers championship standings'),
+    ('/constructors', 'Current constructors championship standings'),
+    ('/standings', 'Current standings (drivers + constructors)'),
+    ('/stats [n=5]', 'Winners and poles for last n races'),
 )
 
 @bot.message_handler(commands=["commands", "help"])
@@ -155,6 +161,60 @@ def constructors(message):
     mes += "</pre>"
 
     bot.send_message(message.chat.id, mes, parse_mode="HTML")
+
+
+@bot.message_handler(commands=["stats", "circuitstats"])
+def stats(message):
+    count = 0
+    try:
+        number = int(message.text.split()[1])
+    except IndexError or ValueError:
+        number = 5
+    if number > 10:
+        number = 10
+
+    d = get_next_race_info()
+    circuit_id = d['circuit_id']
+    
+    last_year = d['season'] - 1
+    race_winners = []
+    while len(race_winners)!=number and last_year!=1997:
+        url = f'https://f1api.dev/api/{last_year}'
+        request = requests.get(url)
+        data = request.json()
+        for race in data['races']:
+            if race['circuit']['circuitId'] == circuit_id:
+                race_n = race['round']
+                url = f"https://f1api.dev/api/{last_year}/{race_n}/race"
+                request = requests.get(url)
+                data_race = request.json()
+                race_winner_name = f"{data_race['races']['results'][0]['driver']['name']} {data_race['races']['results'][0]['driver']['surname']}"
+
+                url = f"https://f1api.dev/api/{last_year}/{race_n}/qualy"
+                request = requests.get(url)
+                data_qualy = request.json()
+                pole_winner_name = f"{data_qualy['races']['qualyResults'][0]['driver']['name']} {data_qualy['races']['qualyResults'][0]['driver']['surname']}"
+
+                race_winners.append((last_year, pole_winner_name, race_winner_name))
+                break
+        last_year -= 1
+
+    
+    mes = f"Circuit statistics ({d['circuit_id']})\n\n<pre>"
+    pos = f"Year".ljust(4)
+    pole = f"Pole position".ljust(25)
+    winner = f"Winner".ljust(25)
+    mes += f"{pos} {pole} {winner}\n"
+    for year in race_winners:
+        pos = f"{year[0]}".ljust(4)
+        pole = f"{year[1]}".ljust(25)
+        winner = f"{year[2]}".ljust(25)
+        mes += f"{pos} {pole} {winner}\n"
+
+    mes += "</pre>"
+
+    bot.send_message(message.chat.id, mes, parse_mode="HTML")
+    
 
 
 @bot.message_handler(commands=["standings"])
