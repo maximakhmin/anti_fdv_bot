@@ -188,12 +188,12 @@ def stats(message):
                 url = f"https://f1api.dev/api/{last_year}/{race_n}/race"
                 request = requests.get(url)
                 data_race = request.json()
-                race_winner_name = f"{data_race['races']['results'][0]['driver']['name'][0]}. {data_race['races']['results'][0]['driver']['surname']}"
+                race_winner_name = f"{data_race['races']['results'][0]['driver']['surname']}"
 
                 url = f"https://f1api.dev/api/{last_year}/{race_n}/qualy"
                 request = requests.get(url)
                 data_qualy = request.json()
-                pole_winner_name = f"{data_qualy['races']['qualyResults'][0]['driver']['name'][0]}. {data_qualy['races']['qualyResults'][0]['driver']['surname']}"
+                pole_winner_name = f"{data_qualy['races']['qualyResults'][0]['driver']['surname']}"
 
                 race_winners.append((last_year, pole_winner_name, race_winner_name))
                 break
@@ -201,20 +201,19 @@ def stats(message):
     
     mes = f"Circuit statistics ({d['circuit_id']})\n\n<pre>"
     pos = f"Year".ljust(4)
-    pole = f"Pole position".ljust(16)
-    winner = f"Winner".ljust(16)
+    pole = f"Pole position".ljust(14)
+    winner = f"Winner".ljust(14)
     mes += f"{pos} {pole} {winner}\n"
     for year in race_winners:
         pos = f"{year[0]}".ljust(4)
-        pole = f"{year[1]}".ljust(16)
-        winner = f"{year[2]}".ljust(16)
+        pole = f"{year[1]}".ljust(14)
+        winner = f"{year[2]}".ljust(14)
         mes += f"{pos} {pole} {winner}\n"
 
     mes += "</pre>"
 
     bot.send_message(message.chat.id, mes, parse_mode="HTML")
     
-
 
 @bot.message_handler(commands=["standings"])
 def standings(message):
