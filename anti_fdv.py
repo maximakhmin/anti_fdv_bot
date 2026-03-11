@@ -120,6 +120,48 @@ def whensprint(message):
     bot.send_message(message.chat.id, mes)
 
 
+@bot.message_handler(commands=["drivers"])
+def drivers(message):
+    url = f'https://f1api.dev/api/current/drivers-championship'
+    request = requests.get(url)
+    data = request.json()
+
+    mes = "Drivers championship\n\n<pre>"
+
+    for driver in data['drivers_championship']:
+        pos = f"{driver['position']}.".ljust(3)
+        name = f"{driver['driver']['name']} {driver['driver']['surname']}".ljust(25)
+        points = f"{driver['points']}".ljust(4)
+        mes += f"{pos} {name} {points}\n"
+
+    mes += "</pre>"
+
+    bot.send_message(message.chat.id, mes, parse_mode="HTML")
+
+@bot.message_handler(commands=["constructors"])
+def constructors(message):
+    url = f'https://f1api.dev/api/current/constructors-championship'
+    request = requests.get(url)
+    data = request.json()
+
+    mes = "Constructors championship\n\n<pre>"
+
+    for constructor in data['constructors_championship']:
+        pos = f"{constructor['position']}.".ljust(3)
+        name = f"{constructor['team']['teamName']}".ljust(25)
+        points = f"{constructor['points']}".ljust(4)
+        mes += f"{pos} {name} {points}\n"
+
+    mes += "</pre>"
+
+    bot.send_message(message.chat.id, mes, parse_mode="HTML")
+
+
+@bot.message_handler(commands=["standings"])
+def standings(message):
+    drivers(message)
+    constructors(message)
+
 def check_time():
     def set_time():
         qualy_time = get_next_race_info()['deadline']
