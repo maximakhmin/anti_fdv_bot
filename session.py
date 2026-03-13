@@ -58,7 +58,7 @@ def load_data(s, r, t):
             if t in ["Q", "SQ"]:
                 if pos==1:
                     time0 = results.iloc[i]["Q3"]
-                    delta =f"{time0.seconds//60}:{time0.seconds%60:02}.{time0.microseconds//1000}"
+                    delta =f"{time0.seconds//60}:{(time0.seconds + time0.microseconds/1000000):06.3f}"
 
                 else:
                     if pos<=10: q="Q3"
@@ -68,7 +68,7 @@ def load_data(s, r, t):
                         delta = "No time"
                     else:
                         timedelta = results.iloc[i][q] - time0
-                        delta = f"  +{timedelta.seconds}.{timedelta.microseconds//1000}"
+                        delta = f"  +{(timedelta.seconds + timedelta.microseconds/1000000):.3f}"
 
             elif t in ["R", "S"]:
                 if i==0:
@@ -76,7 +76,7 @@ def load_data(s, r, t):
                     delta = f"{lap0} L"
                 elif results.iloc[i]["Status"] == "Finished":
                     time = results.iloc[i]["Time"]
-                    delta = f"+{time.seconds}.{time.microseconds//1000}"
+                    delta = f"  +{(timedelta.seconds + timedelta.microseconds/1000000):.3f}"
                 elif results.iloc[i]["Status"] == "Lapped":
                     laps = int(results.iloc[i]["Laps"])
                     delta = f"+{lap0-laps} L"
@@ -95,4 +95,3 @@ def load_data(s, r, t):
     mes += "</pre>"
 
     return 0, mes
-
