@@ -7,6 +7,7 @@ from tokens import TOKEN, CHAT_ID, FORM_LINK, MARKS
 import time
 import threading
 import pytz
+from session import load_data
 
 
 bot = telebot.TeleBot(TOKEN)
@@ -28,6 +29,7 @@ def get_next_race_info():
     dic = {
         'is_sprint' : is_sprint,
         'season' : data['season'],
+        'round' : data['round'],
         'name' : data['race'][0]['raceName'],
         'circuit_id' : data['race'][0]['circuit']['circuitId'],
         'circuit' : f"{data['race'][0]['circuit']['circuitName']}, {data['race'][0]['circuit']['country']}, {data['race'][0]['circuit']['city']}",
@@ -248,12 +250,57 @@ def check_time():
         for rm in to_remove:
             reminds.pop(rm)
 
+
+def send_results():
+    def set_time():
+        d = get_next_race_info()
+        season = d['season']
+        round = d['round']
+        results = {
+            "FP1" : d["fp1_time"],
+            "Q" : d["qualy_time"],
+            "R" : d["race_time"],
+        }
+        if d["is_sprint"]:
+            results["SQ"] = d['sprint_qualy_time']
+            results["S"] = d['sprint_race_time']
+        else:
+            results["FP2"] = d['fp2_time']
+            results["FP3"] = d['fp3_time']
+
+        return results, season, round
+    
+    results, season, round = set_time()
+    last_time = results["R"]
+    while True:
+        now = datetime.now(pytz.timezone("UTC"))
+
+        if len(results)==0 and now > (last_time + timedelta(days=2)):
+            last_time = results["R"]
+            results, season, round = set_time()
+        to_remove = []
+        for session, session_t in results.items():
+            if session_t < now:
+                status, mes = load_data(season, round, session)
+                if status == 0:
+                    bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
+                    to_remove.append(session)
+        for rm in to_remove:
+            results.pop(rm)
+
+        time.sleep(60)
+
         
 if __name__ == "__main__":
     t1 = threading.Thread(target=check_time)
     t1.start()
-    t2 = threading.Thread(target=bot.infinity_polling(none_stop=True, interval=1))
+    t2 = threading.Thread(target=send_results)
     t2.start()
+    t3 = threading.Thread(target=bot.infinity_polling(none_stop=True, interval=1))
+    t3.start()
+
 
 
 # bot.infinity_polling(none_stop=True, interval=1)
+
+# send_results()
