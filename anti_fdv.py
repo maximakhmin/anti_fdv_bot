@@ -7,7 +7,7 @@ from tokens import TOKEN, CHAT_ID, FORM_LINK, MARKS
 import time
 import threading
 import pytz
-from session import load_data
+from session import load_data, get_f1_session_results
 
 
 bot = telebot.TeleBot(TOKEN)
@@ -281,7 +281,7 @@ def send_results():
         to_remove = []
         for session, session_t in results.items():
             if session_t < now:
-                status, mes = load_data(season, round, session)
+                status, mes = get_f1_session_results(season, round, session)
                 if status == 0:
                     bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
                     to_remove.append(session)
