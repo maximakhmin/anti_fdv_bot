@@ -240,6 +240,7 @@ def check_time():
 
         if now > qualy_time:
             qualy_time, reminds = set_time()
+            time.sleep(1000)
             continue
         to_remove = []
         for remind, mes in reminds.items():
@@ -257,16 +258,17 @@ def send_results():
         season = d['season']
         round = d['round']
         results = {
-            "FP1" : d["fp1_time"],
-            "Q" : d["qualy_time"],
-            "R" : d["race_time"],
-        }
+            "FP1" : d["fp1_time"] }
         if d["is_sprint"]:
             results["SQ"] = d['sprint_qualy_time']
             results["S"] = d['sprint_race_time']
         else:
             results["FP2"] = d['fp2_time']
             results["FP3"] = d['fp3_time']
+
+        results["Q"] = d["qualy_time"]
+        results["R"] = d["race_time"]
+
 
         return results, season, round
     
@@ -281,10 +283,13 @@ def send_results():
         to_remove = []
         for session, session_t in results.items():
             if session_t < now:
-                status, mes = get_f1_session_results(season, round, session)
-                if status == 0:
-                    bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
+                if (session_t+timedelta(days=1)) < now:
                     to_remove.append(session)
+                else:
+                    status, mes = get_f1_session_results(season, round, session)
+                    if status == 0:
+                        bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
+                        to_remove.append(session)
         for rm in to_remove:
             results.pop(rm)
 

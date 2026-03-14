@@ -117,11 +117,14 @@ def get_f1_session_results(year, round_num, session_type):
         # Сортируем по самому быстрому кругу
         fastest_laps = session.laps.pick_quicklaps().sort_values(by='LapTime').reset_index()
         best_time_overall = fastest_laps.iloc[0]['LapTime']
-
+        added = []
+        pos = 0
         for i, row in fastest_laps.iterrows():
-            pos = f"{i + 1:02}"
             full_name = session.results.loc[session.results['Abbreviation'] == row['Driver'], 'FullName'].iloc[0]
-            
+            if full_name in added:
+                continue
+            added.append(full_name)
+            pos += 1
             if i == 0:
                 t = row['LapTime'].total_seconds()
                 time_str = f"{int(t // 60)}:{t % 60:06.3f}"
@@ -185,7 +188,7 @@ def get_f1_session_results(year, round_num, session_type):
                     time_str = f"+{gap:.3f}"
             results_array.append((pos, full_name, time_str))
 
-    mes = f"Season {year}, round {round}, {session_type} results\n\n"
+    mes = f"Season {year}, round {round_num}, {session_type} results\n\n"
     mes += "<pre>"
     for elem in results_array:
         pos = f"{elem[0]}.".ljust(3)
@@ -196,3 +199,5 @@ def get_f1_session_results(year, round_num, session_type):
 
     return 0, mes
 
+
+# print(get_f1_session_results(2026, 2, "Q"))
