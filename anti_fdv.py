@@ -288,7 +288,7 @@ def send_results():
                     status, mes = get_f1_session_results(season, round, session)
                     print(status, season, round, session)
                     if status == 0:
-                        bot.send_message(chat_id=BOSS_USER, text=f"{mes}", parse_mode="HTML")
+                        bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
                         to_remove.append(session)
         for rm in to_remove:
             results.pop(rm)
