@@ -2,6 +2,7 @@ import fastf1
 import datetime
 import pandas as pd
 
+fastf1.set_log_level('ERROR')
 
 def load_data(s, r, t):
     session = fastf1.get_session(s, r, t)

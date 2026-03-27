@@ -2,8 +2,7 @@ import telebot
 import requests
 from datetime import datetime
 from datetime import timedelta
-# import prognoz_table
-from tokens import TOKEN, CHAT_ID, FORM_LINK, MARKS
+from tokens import TOKEN, CHAT_ID, BOSS_USER
 import time
 import threading
 import pytz
@@ -277,9 +276,9 @@ def send_results():
     while True:
         now = datetime.now(pytz.timezone("UTC"))
 
-        if len(results)==0 and now > (last_time + timedelta(days=2)):
-            last_time = results["R"]
+        if now > (last_time + timedelta(days=2)):
             results, season, round = set_time()
+            last_time = results["R"]
         to_remove = []
         for session, session_t in results.items():
             if session_t < now:
@@ -287,8 +286,9 @@ def send_results():
                     to_remove.append(session)
                 else:
                     status, mes = get_f1_session_results(season, round, session)
+                    print(status, season, round, session)
                     if status == 0:
-                        bot.send_message(chat_id=CHAT_ID, text=f"{mes}", parse_mode="HTML")
+                        bot.send_message(chat_id=BOSS_USER, text=f"{mes}", parse_mode="HTML")
                         to_remove.append(session)
         for rm in to_remove:
             results.pop(rm)
